@@ -1,0 +1,5 @@
+[
+  {"id": "C1", "name": "Alice Yamamoto", "email": "alice@example.com", "tier": "standard"},
+  {"id": "C2", "name": "Bob Tanaka",     "email": "bob@example.com",   "tier": "standard"},
+  {"id": "C3", "name": "Carol Sato",     "email": "carol@example.com", "tier": "premium"}
+]

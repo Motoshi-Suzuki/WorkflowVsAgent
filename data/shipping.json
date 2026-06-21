@@ -1,0 +1,23 @@
+[
+  {
+    "order_id": "1001",
+    "state": "in_transit",
+    "dispatched_at": "2026-06-19",
+    "eta": "2026-06-22",
+    "can_change_address": false
+  },
+  {
+    "order_id": "1002",
+    "state": "dispatched",
+    "dispatched_at": "2026-06-20T12:00:00",
+    "eta": "2026-06-23",
+    "can_change_address": false
+  },
+  {
+    "order_id": "1003",
+    "state": "delivered",
+    "dispatched_at": "2026-06-16",
+    "eta": null,
+    "can_change_address": false
+  }
+]

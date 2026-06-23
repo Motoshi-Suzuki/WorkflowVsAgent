@@ -231,6 +231,30 @@
       text-transform: uppercase; letter-spacing: 0.08em;
       margin-bottom: 4px;
     }
+    .log-reply-ja {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed #e4e4e7;
+      color: #52525b;
+      font-size: 12.5px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+    }
+    .log-reply-ja-label {
+      font-size: 10px; font-weight: 700; color: #c4c4c8;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    /* Japanese translation on the user bubble */
+    .bubble-ja {
+      font-size: 12px;
+      color: rgba(255,255,255,0.72);
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed rgba(255,255,255,0.3);
+      line-height: 1.7;
+    }
 
     .log-warning {
       font-size: 12px; color: #b45309;
@@ -357,6 +381,11 @@
     const bubble = document.createElement('div');
     bubble.className = 'bubble-user';
     bubble.textContent = inquiry;
+    // placeholder for Japanese translation of inquiry
+    const bubbleJa = document.createElement('div');
+    bubbleJa.className = 'bubble-ja';
+    bubbleJa.id = 'bubble-ja';
+    bubble.appendChild(bubbleJa);
     bubbleRow.appendChild(bubble);
     chatArea.appendChild(bubbleRow);
 
@@ -425,12 +454,33 @@
   function handleEvent(evt, wBody, aBody, state) {
     if (evt.type === 'done') { runBtn.disabled = false; return; }
 
+    // Inquiry translation — append inside the user bubble
+    if (evt.type === 'inquiry_ja') {
+      const el = document.getElementById('bubble-ja');
+      if (el) el.textContent = evt.data;
+      return;
+    }
+
     const body = evt.side === 'workflow' ? wBody : aBody;
     const started = evt.side === 'workflow' ? state.wStarted() : state.aStarted();
 
     if (!started) {
       body.innerHTML = '';
       if (evt.side === 'workflow') state.setW(true); else state.setA(true);
+    }
+
+    // Reply translation — append after the existing reply block
+    if (evt.type === 'reply_ja') {
+      const jaLabel = document.createElement('div');
+      jaLabel.className = 'log-reply-ja-label';
+      jaLabel.textContent = '日本語訳';
+      body.appendChild(jaLabel);
+      const jaText = document.createElement('div');
+      jaText.className = 'log-reply-ja';
+      jaText.textContent = evt.data;
+      body.appendChild(jaText);
+      jaText.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return;
     }
 
     const line = document.createElement('div');

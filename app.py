@@ -2,12 +2,13 @@
 Web UI server.
 
 Usage:
-  python app.py          # then open http://localhost:5000
+  python app.py          # then open http://localhost:8080
 """
 
 import json
 import queue
 import threading
+import anthropic
 from flask import Flask, Response, request, send_file, stream_with_context
 from dotenv import load_dotenv
 from scenarios import SCENARIOS
@@ -17,6 +18,22 @@ import agent
 load_dotenv()
 
 app = Flask(__name__, static_folder="static")
+
+_TRANSLATE_SYSTEM = (
+    "Translate the following customer-service text into natural Japanese. "
+    "Output only the translation — no explanation, no romanisation."
+)
+
+
+def _translate(client: anthropic.Anthropic, text: str) -> str:
+    resp = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=1024,
+        temperature=0,
+        system=_TRANSLATE_SYSTEM,
+        messages=[{"role": "user", "content": text}],
+    )
+    return resp.content[0].text
 
 
 @app.route("/")
@@ -39,15 +56,21 @@ def run():
 
     q: queue.Queue = queue.Queue()
 
-    def notify(side):
-        def _emit(event_type, event_data):
+    def make_notify(side: str, client: anthropic.Anthropic):
+        def _emit(event_type: str, event_data: str) -> None:
             q.put({"side": side, "type": event_type, "data": event_data})
+            if event_type == "reply":
+                ja = _translate(client, event_data)
+                q.put({"side": side, "type": "reply_ja", "data": ja})
         return _emit
 
     def worker():
         try:
-            workflow.run_workflow(inquiry, notify=notify("workflow"))
-            agent.run_agent(inquiry, notify=notify("agent"))
+            client = anthropic.Anthropic()
+            inquiry_ja = _translate(client, inquiry)
+            q.put({"type": "inquiry_ja", "data": inquiry_ja})
+            workflow.run_workflow(inquiry, notify=make_notify("workflow", client))
+            agent.run_agent(inquiry, notify=make_notify("agent", client))
         finally:
             q.put(None)
 

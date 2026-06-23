@@ -137,7 +137,7 @@ which inquiry.*
 ---
 
 ## 5. Model / config notes
-- Default model `claude-sonnet-4-6`, same on both sides, temperature 0.
+- Default model `claude-haiku-4-5`, same on both sides, temperature 0.
 - Agent loop cap: ~6 iterations (prevents an infinite tool loop — itself a
   named agent failure mode worth a one-liner on stage).
 - If you'd rather demo in Node: the architecture is unchanged — swap the SDK and

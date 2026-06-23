@@ -12,7 +12,7 @@ import tools as T
 
 load_dotenv()
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "claude-haiku-4-5-20251001"
 
 # ── Classification ────────────────────────────────────────────────────────────
 

@@ -25,7 +25,7 @@ say "add the branch."
 ## Hard design constraints (these protect the thesis)
 - **Both systems call the LLM.** The contrast is *agentic* vs. *scripted-LLM*,
   NOT LLM vs. no-LLM. Never let the workflow become a dumb regex.
-- **Same model on both sides** (default `claude-sonnet-4-6`). The only variable
+- **Same model on both sides** (default `claude-haiku-4-5`). The only variable
   we are demonstrating is control flow, so model capability must be held
   constant. Do not use a weaker model for the workflow.
 - **Identical, shared tools.** Both runners import the exact same functions from

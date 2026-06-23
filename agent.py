@@ -32,7 +32,20 @@ Guidelines:
 You have a maximum of 6 tool calls."""
 
 
-def run_agent(inquiry: str) -> None:
+def run_agent(inquiry: str, notify=None) -> None:
+    def emit(event_type, data):
+        if notify:
+            notify(event_type, data)
+        else:
+            if event_type == "tool_call":
+                print(f"  [tool] {data}")
+            elif event_type == "tool_result":
+                print(f"  [tool] -> {data}")
+            elif event_type == "reply":
+                print(f"\n  [reply]\n  {data}")
+            elif event_type == "warning":
+                print(f"  [warning] {data}")
+
     client = anthropic.Anthropic()
     msgs = [{"role": "user", "content": inquiry}]
 
@@ -47,7 +60,7 @@ def run_agent(inquiry: str) -> None:
         )
 
         if response.stop_reason == "end_turn":
-            print(f"\n  [reply]\n  {_text(response)}")
+            emit("reply", _text(response))
             return
 
         if response.stop_reason == "tool_use":
@@ -56,9 +69,9 @@ def run_agent(inquiry: str) -> None:
 
             for block in response.content:
                 if block.type == "tool_use":
-                    print(f"  [tool] {block.name}({T.fmt_args(block.input)})")
+                    emit("tool_call", f"{block.name}({T.fmt_args(block.input)})")
                     result = T.execute_tool(block.name, block.input)
-                    print(f"  [tool] -> {result}")
+                    emit("tool_result", result)
                     tool_results.append(
                         {
                             "type": "tool_result",
@@ -70,13 +83,11 @@ def run_agent(inquiry: str) -> None:
             msgs.append({"role": "user", "content": tool_results})
             continue
 
-        # Unexpected stop reason
-        print(f"  [warning] unexpected stop_reason={response.stop_reason!r}")
-        print(f"\n  [reply]\n  {_text(response)}")
+        emit("warning", f"unexpected stop_reason={response.stop_reason!r}")
+        emit("reply", _text(response))
         return
 
-    # Hit the iteration cap — ask for a best-effort final reply
-    print(f"  [warning] reached {MAX_ITERATIONS}-iteration cap")
+    emit("warning", f"reached {MAX_ITERATIONS}-iteration cap")
     final = client.messages.create(
         model=MODEL,
         max_tokens=512,
@@ -87,7 +98,7 @@ def run_agent(inquiry: str) -> None:
         ),
         messages=msgs,
     )
-    print(f"\n  [reply]\n  {_text(final)}")
+    emit("reply", _text(final))
 
 
 def _text(response: anthropic.types.Message) -> str:

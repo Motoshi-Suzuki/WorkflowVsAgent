@@ -109,6 +109,7 @@ def _run_template(
     client: anthropic.Anthropic,
     inquiry: str,
     system: str,
+    emit,
 ) -> str:
     """Execute the template: at most ONE tool call, then a final text reply."""
     msgs = [{"role": "user", "content": inquiry}]
@@ -125,11 +126,10 @@ def _run_template(
     if r1.stop_reason != "tool_use":
         return _text(r1)
 
-    # Execute the first (and only) tool call
     tool_block = next(b for b in r1.content if b.type == "tool_use")
-    print(f"  [tool] {tool_block.name}({T.fmt_args(tool_block.input)})")
+    emit("tool_call", f"{tool_block.name}({T.fmt_args(tool_block.input)})")
     result = T.execute_tool(tool_block.name, tool_block.input)
-    print(f"  [tool] -> {result}")
+    emit("tool_result", result)
 
     msgs = msgs + [
         {"role": "assistant", "content": r1.content},
@@ -145,7 +145,6 @@ def _run_template(
         },
     ]
 
-    # Second call without tools so the model must produce a text reply
     r2 = client.messages.create(
         model=MODEL,
         max_tokens=512,
@@ -165,16 +164,29 @@ def _text(response: anthropic.types.Message) -> str:
 
 # ── Public entry point ────────────────────────────────────────────────────────
 
-def run_workflow(inquiry: str) -> None:
+def run_workflow(inquiry: str, notify=None) -> None:
+    def emit(event_type, data):
+        if notify:
+            notify(event_type, data)
+        else:
+            if event_type == "classify":
+                print(f"  [classify] intent = {data}")
+            elif event_type == "tool_call":
+                print(f"  [tool] {data}")
+            elif event_type == "tool_result":
+                print(f"  [tool] -> {data}")
+            elif event_type == "reply":
+                print(f"\n  [reply]\n  {data}")
+
     client = anthropic.Anthropic()
 
     intent = _classify(client, inquiry)
-    print(f"  [classify] intent = {intent}")
+    emit("classify", intent)
 
     system = _TEMPLATE_SYSTEMS.get(intent)
     if system is None:
-        print(f"\n  [reply]\n  {_GENERIC_FALLBACK}")
+        emit("reply", _GENERIC_FALLBACK)
         return
 
-    reply = _run_template(client, inquiry, system)
-    print(f"\n  [reply]\n  {reply}")
+    reply = _run_template(client, inquiry, system, emit)
+    emit("reply", reply)

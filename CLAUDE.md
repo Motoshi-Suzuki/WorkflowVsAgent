@@ -46,7 +46,7 @@ inquiry-demo/
   CLAUDE.md            # this file
   README.md            # how to run, what the audience should watch for
   .env.example         # ANTHROPIC_API_KEY=...
-  requirements.txt     # anthropic, python-dotenv
+  requirements.txt     # anthropic, python-dotenv, flask
   data/
     orders.json
     customers.json
@@ -57,6 +57,9 @@ inquiry-demo/
   agent.py             # tool-use loop
   scenarios.py         # the 3 demo inquiries
   run.py               # CLI: `python run.py <scenario>` runs BOTH, side by side
+  app.py               # Flask web server — `python app.py` → http://localhost:8080
+  static/
+    index.html         # browser UI: scenario buttons + streaming side-by-side panels
 ```
 
 ## Shared tools (`tools.py`)
@@ -84,19 +87,28 @@ All read from `data/`. Keep signatures identical for both runners.
 3. Print each tool call + result. Final answer addresses *every* part of the
    inquiry and includes an escalation flag where warranted.
 
-## Run UX (`run.py`)
-`python run.py compound` prints, clearly separated:
+## Run UX
+
+**Browser (`app.py`)** — `python app.py` → http://localhost:8080  
+Scenario buttons (Simple / Compound / Novel) at the top; free-text input for
+custom inquiries. Results stream live into two side-by-side panels. Each tool
+call and result appears as it happens. Preferred for presentations.
+
+**CLI (`run.py`)** — `python run.py compound` prints, clearly separated:
 - the inquiry,
 - `--- WORKFLOW ---` : its single classification, its one path, its reply,
 - `--- AGENT ---` : each tool call/result in sequence, then its reply.
-Keep it readable on a projector: short lines, clear section headers.
+
+Both runners share the same `notify` callback interface inside `workflow.py` and
+`agent.py`. When `notify=None` (CLI), events fall back to `print`. When
+`notify` is supplied (web), events are streamed as SSE to the browser.
 
 ## Staged build
 - **v0**: tools + data + the three scenarios + workflow only. Confirm the
-  workflow answers the simple case well. (Proves it isn't a strawman.)
-- **v1**: add the agent loop. Run all three side by side.
-- **v2**: polish the on-screen formatting; add a `--live` mode that accepts a
-  typed inquiry so the audience can throw their own curveball.
+  workflow answers the simple case well. (Proves it isn't a strawman.) ✓
+- **v1**: add the agent loop. Run all three side by side. ✓
+- **v2**: browser UI with live streaming; `--live` mode in CLI for custom
+  inquiries. ✓
 
 ## Guardrails (demo hygiene)
 - Draft/demo only: nothing sends email, charges, or mutates real systems.

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow vs Agent Demo</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f0f2f5;
+      color: #111;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      background: #18181b;
+      color: #fff;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.01em; }
+    header .tag {
+      font-size: 11px; background: #3f3f46; color: #a1a1aa;
+      padding: 2px 8px; border-radius: 99px; font-weight: 500;
+    }
+
+    /* ── Scenario bar ────────────────────────────────────── */
+    .scenario-bar {
+      background: #fff;
+      border-bottom: 1px solid #e4e4e7;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .scenario-bar .label {
+      font-size: 12px; font-weight: 600; color: #71717a;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .btn-scenario {
+      padding: 6px 16px;
+      border: 1.5px solid #d4d4d8;
+      background: #fff;
+      border-radius: 99px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: #3f3f46;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+    .btn-scenario:hover { border-color: #a1a1aa; background: #fafafa; }
+    .btn-scenario.active {
+      background: #18181b; color: #fff; border-color: #18181b;
+    }
+    .divider { width: 1px; height: 20px; background: #e4e4e7; flex-shrink: 0; }
+    .custom-row { display: flex; gap: 8px; flex: 1; min-width: 220px; }
+    .custom-row input {
+      flex: 1;
+      padding: 7px 14px;
+      border: 1.5px solid #d4d4d8;
+      border-radius: 99px;
+      font-size: 13px;
+      outline: none;
+      color: #111;
+      background: #fff;
+      transition: border-color 0.12s;
+    }
+    .custom-row input:focus { border-color: #71717a; }
+    .custom-row input::placeholder { color: #a1a1aa; }
+    .btn-run {
+      padding: 7px 20px;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 99px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background 0.12s;
+    }
+    .btn-run:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-run:disabled { background: #a1a1aa; cursor: not-allowed; }
+
+    /* ── Chat area ───────────────────────────────────────── */
+    .chat-area {
+      flex: 1;
+      padding: 28px 24px;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #a1a1aa;
+      font-size: 14px;
+      margin-top: 60px;
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+
+    /* Scenario description */
+    .scenario-desc {
+      font-size: 12px;
+      color: #71717a;
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-left: 3px solid #a1a1aa;
+      border-radius: 8px;
+      padding: 8px 14px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* User bubble */
+    .bubble-row { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+    .bubble-user {
+      background: #2563eb;
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: 18px 18px 4px 18px;
+      max-width: 65%;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* Response panels */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 700px) { .panels { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: #fff;
+      border: 1px solid #e4e4e7;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .panel-header {
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-workflow .panel-header {
+      background: #fef9c3; color: #713f12;
+      border-bottom: 1px solid #fde68a;
+    }
+    .panel-agent .panel-header {
+      background: #dcfce7; color: #14532d;
+      border-bottom: 1px solid #bbf7d0;
+    }
+    .panel-header .pill {
+      font-size: 10px; font-weight: 500;
+      background: rgba(0,0,0,0.08);
+      padding: 1px 7px; border-radius: 99px;
+      text-transform: none; letter-spacing: 0;
+    }
+
+    .panel-body {
+      padding: 14px 16px;
+      font-size: 13px;
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .placeholder-panel { color: #a1a1aa; font-style: italic; }
+
+    /* Log lines */
+    .log-line { padding: 3px 0; }
+
+    .log-classify {
+      color: #6b7280; font-style: italic;
+      font-size: 12px;
+    }
+    .log-classify::before { content: "◆ "; font-style: normal; font-size: 9px; }
+
+    .log-tool-call {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11.5px;
+      color: #7c3aed;
+      background: #f5f3ff;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin: 3px 0;
+    }
+    .log-tool-call::before { content: "▶ "; }
+
+    .log-tool-result {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 11px;
+      color: #0369a1;
+      padding: 2px 8px 2px 18px;
+      border-left: 2px solid #bae6fd;
+      margin: 2px 0 6px 0;
+      background: #f0f9ff;
+      border-radius: 0 4px 4px 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .log-reply {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #f0f0f0;
+      color: #111;
+      white-space: pre-wrap;
+    }
+    .log-reply-label {
+      font-size: 10px; font-weight: 700; color: #a1a1aa;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .log-warning {
+      font-size: 12px; color: #b45309;
+      background: #fffbeb; border: 1px solid #fde68a;
+      padding: 3px 8px; border-radius: 4px; margin: 4px 0;
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid #d4d4d8;
+      border-top-color: #71717a;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .status-line {
+      font-size: 12px; color: #71717a; font-style: italic;
+      display: flex; align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Customer Support Demo</h1>
+  <span class="tag">Workflow vs Agent</span>
+</header>
+
+<div class="scenario-bar">
+  <span class="label">Scenario</span>
+  <button class="btn-scenario" data-scenario="simple">Simple</button>
+  <button class="btn-scenario" data-scenario="compound">Compound</button>
+  <button class="btn-scenario" data-scenario="novel">Novel</button>
+  <div class="divider"></div>
+  <div class="custom-row">
+    <input type="text" id="custom-input" placeholder="Or type your own inquiry…" autocomplete="off" />
+    <button class="btn-run" id="run-btn" disabled>Run</button>
+  </div>
+</div>
+
+<div class="chat-area" id="chat-area">
+  <div class="empty-state">
+    <div class="icon">💬</div>
+    Select a scenario or type an inquiry above to begin.
+  </div>
+</div>
+
+<script>
+  const SCENARIOS = {
+    simple: {
+      inquiry: "Hi, where's my order 1001? When will it arrive?",
+      description: "Parity case — single intent, shipping lookup. Both systems should answer equally well."
+    },
+    compound: {
+      inquiry: "Can you change the delivery on order 1002 to tomorrow? If that's not possible, just cancel it and refund me.",
+      description: "Compound conditional: the workflow commits to the first intent and stops; the agent follows the conditional fallback."
+    },
+    novel: {
+      inquiry: "Your driver left my parcel out in the rain and the box is soaked. What are you going to do about it?",
+      description: "Novel intent: no matching workflow template. The agent reasons from policy and escalates; the workflow gives a generic reply."
+    }
+  };
+
+  let activeScenario = null;
+  const runBtn  = document.getElementById('run-btn');
+  const customInput = document.getElementById('custom-input');
+  const chatArea    = document.getElementById('chat-area');
+
+  document.querySelectorAll('.btn-scenario').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeScenario = btn.dataset.scenario;
+      customInput.value = '';
+      runBtn.disabled = false;
+    });
+  });
+
+  customInput.addEventListener('input', () => {
+    if (customInput.value.trim()) {
+      document.querySelectorAll('.btn-scenario').forEach(b => b.classList.remove('active'));
+      activeScenario = null;
+      runBtn.disabled = false;
+    } else {
+      runBtn.disabled = !activeScenario;
+    }
+  });
+
+  customInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !runBtn.disabled) runBtn.click();
+  });
+
+  runBtn.addEventListener('click', () => {
+    let inquiry, scenario, description;
+    if (activeScenario) {
+      scenario = activeScenario;
+      inquiry  = SCENARIOS[activeScenario].inquiry;
+      description = SCENARIOS[activeScenario].description;
+    } else {
+      inquiry = customInput.value.trim();
+      if (!inquiry) return;
+      scenario = null;
+      description = null;
+    }
+    startRun(scenario, inquiry, description);
+  });
+
+  function startRun(scenario, inquiry, description) {
+    runBtn.disabled = true;
+    chatArea.innerHTML = '';
+
+    if (description) {
+      const desc = document.createElement('div');
+      desc.className = 'scenario-desc';
+      desc.textContent = description;
+      chatArea.appendChild(desc);
+    }
+
+    const bubbleRow = document.createElement('div');
+    bubbleRow.className = 'bubble-row';
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble-user';
+    bubble.textContent = inquiry;
+    bubbleRow.appendChild(bubble);
+    chatArea.appendChild(bubbleRow);
+
+    const panels = document.createElement('div');
+    panels.className = 'panels';
+
+    panels.innerHTML = `
+      <div class="panel panel-workflow">
+        <div class="panel-header">
+          Workflow
+          <span class="pill">Scripted LLM</span>
+        </div>
+        <div class="panel-body" id="workflow-body">
+          <div class="status-line"><span class="spinner"></span>Waiting…</div>
+        </div>
+      </div>
+      <div class="panel panel-agent">
+        <div class="panel-header">
+          Agent
+          <span class="pill">Tool-use loop</span>
+        </div>
+        <div class="panel-body" id="agent-body">
+          <div class="status-line"><span class="spinner"></span>Waiting…</div>
+        </div>
+      </div>
+    `;
+    chatArea.appendChild(panels);
+
+    const wBody = document.getElementById('workflow-body');
+    const aBody = document.getElementById('agent-body');
+    let wStarted = false, aStarted = false;
+
+    const body = scenario ? { scenario } : { inquiry };
+
+    fetch('/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(res => {
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      function pump() {
+        reader.read().then(({ done, value }) => {
+          if (done) { runBtn.disabled = false; return; }
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const evt = JSON.parse(line.slice(6));
+                handleEvent(evt, wBody, aBody, { wStarted: () => wStarted, aStarted: () => aStarted,
+                  setW: v => wStarted = v, setA: v => aStarted = v });
+              } catch (_) {}
+            }
+          }
+          pump();
+        }).catch(() => { runBtn.disabled = false; });
+      }
+      pump();
+    }).catch(() => { runBtn.disabled = false; });
+  }
+
+  function handleEvent(evt, wBody, aBody, state) {
+    if (evt.type === 'done') { runBtn.disabled = false; return; }
+
+    const body = evt.side === 'workflow' ? wBody : aBody;
+    const started = evt.side === 'workflow' ? state.wStarted() : state.aStarted();
+
+    if (!started) {
+      body.innerHTML = '';
+      if (evt.side === 'workflow') state.setW(true); else state.setA(true);
+    }
+
+    const line = document.createElement('div');
+    line.className = 'log-line';
+
+    switch (evt.type) {
+      case 'classify':
+        line.className += ' log-classify';
+        line.textContent = `intent = ${evt.data}`;
+        break;
+      case 'tool_call':
+        line.className += ' log-tool-call';
+        line.textContent = evt.data;
+        break;
+      case 'tool_result':
+        line.className += ' log-tool-result';
+        line.textContent = evt.data;
+        break;
+      case 'reply': {
+        const label = document.createElement('div');
+        label.className = 'log-reply-label';
+        label.textContent = 'Reply';
+        body.appendChild(label);
+        line.className += ' log-reply';
+        line.textContent = evt.data;
+        break;
+      }
+      case 'warning':
+        line.className += ' log-warning';
+        line.textContent = `⚠ ${evt.data}`;
+        break;
+      default:
+        return;
+    }
+
+    body.appendChild(line);
+    line.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+</script>
+</body>
+</html>

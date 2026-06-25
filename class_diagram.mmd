@@ -1,0 +1,75 @@
+classDiagram
+    class tools {
+        +TOOL_DEFINITIONS : list
+        +get_order(order_id: str) dict
+        +get_shipping_status(order_id: str) dict
+        +get_customer(customer_id: str) dict
+        +lookup_policy(topic: str) str
+        +execute_tool(name: str, tool_input: dict) str
+        +fmt_args(d: dict) str
+    }
+
+    class workflow {
+        +MODEL : str
+        -_CLASSIFY_SYSTEM : str
+        -_VALID_INTENTS : set
+        -_TEMPLATE_SYSTEMS : dict
+        -_GENERIC_FALLBACK : str
+        -_classify(client, inquiry: str) str
+        -_run_template(client, inquiry, system, emit) str
+        -_text(response) str
+        +run_workflow(inquiry: str, notify) None
+    }
+
+    class agent {
+        +MODEL : str
+        +MAX_ITERATIONS : int
+        -_AGENT_SYSTEM : str
+        -_text(response) str
+        +run_agent(inquiry: str, notify) None
+    }
+
+    class scenarios {
+        +SCENARIOS : dict
+    }
+
+    class run {
+        -WIDTH : int
+        -_bar(title: str) None
+        -_run(scenario_name: str, inquiry: str) None
+        +main() None
+    }
+
+    class app {
+        +app : Flask
+        -_TRANSLATE_SYSTEM : str
+        -_translate(client, text: str) str
+        +index() Response
+        +run() Response
+    }
+
+    class AnthropicAPI {
+        <<external>>
+        +messages.create()
+    }
+
+    class DataLayer {
+        <<data>>
+        +orders.json
+        +customers.json
+        +shipping.json
+        +policies.md
+    }
+
+    workflow --> tools : uses
+    agent --> tools : uses
+    tools --> DataLayer : reads
+    workflow --> AnthropicAPI : classify + template calls
+    agent --> AnthropicAPI : tool-use loop calls
+    app --> AnthropicAPI : translate calls
+    run --> workflow : run_workflow()
+    run --> agent : run_agent()
+    run --> scenarios : reads SCENARIOS
+    app --> workflow : run_workflow()
+    app --> agent : run_agent()
+    app --> scenarios : reads SCENARIOS
